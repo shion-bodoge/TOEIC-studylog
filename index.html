@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TOEIC 学習ログ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@400;500&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{
+      --bg: #f8f4ee;
+      --card: rgba(255,255,255,0.88);
+      --line: #e4d6c9;
+      --text: #5a4a42;
+      --muted: #8b7a71;
+      --accent: #d49a9a;
+      --accent-strong: #bf7f7f;
+      --accent-soft: #f7dede;
+      --brown-soft: #efe1d3;
+      --green-soft: #dff2df;
+      --shadow: 0 14px 32px rgba(117, 92, 75, 0.10);
+      --radius-xl: 30px;
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:"Zen Maru Gothic", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.92), transparent 33%),
+        radial-gradient(circle at bottom right, rgba(247,222,222,0.45), transparent 28%),
+        linear-gradient(180deg, #fcfaf7 0%, var(--bg) 100%);
+      line-height:1.65;
+    }
+    button,input,select,textarea{ font:inherit; }
+    .wrap{ max-width:1440px; margin:0 auto; padding:24px 16px 48px; }
+    .hero{
+      position:relative; overflow:hidden; margin-bottom:20px;
+      background:linear-gradient(135deg, rgba(255,255,255,0.88), rgba(255,250,245,0.8));
+      border:1px solid rgba(228,214,201,0.9); box-shadow:var(--shadow);
+      border-radius:34px; padding:26px;
+    }
+    .hero::after{
+      content:""; position:absolute; width:180px; height:180px; right:-40px; top:-50px;
+      background:radial-gradient(circle, rgba(247,222,222,0.75), transparent 65%);
+      pointer-events:none;
+    }
+    .hero-top{ display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+    .hero h1{ margin:0 0 8px; font-family:"Kiwi Maru", serif; font-size:clamp(1.9rem, 3vw, 2.9rem); font-weight:500; letter-spacing:.04em; }
+    .hero p{ margin:0; color:var(--muted); }
+
+    .goal-box{
+      min-width:320px; background:rgba(255,255,255,0.76); border:1px solid var(--line);
+      border-radius:24px; padding:16px;
+    }
+    .goal-box h2,.section-title{
+      margin:0 0 12px; font-family:"Kiwi Maru", serif; font-weight:500; font-size:1.15rem;
+    }
+    .goal-grid,.form-grid,.score-grid,.timer-config,.summary-grid,.stats{
+      display:grid; gap:12px;
+    }
+    .goal-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); margin-bottom:12px; }
+    .goal-pill-row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .goal-pill{
+      background:var(--accent-soft); border:1px solid #efc5c5; border-radius:999px;
+      padding:7px 12px; font-size:.92rem;
+    }
+
+    .layout{ display:grid; grid-template-columns:1.12fr .88fr; gap:20px; align-items:start; }
+    .left-col,.right-col{ display:flex; flex-direction:column; gap:20px; }
+
+    .card{
+      background:var(--card); border:1px solid rgba(228,214,201,0.92);
+      box-shadow:var(--shadow); border-radius:var(--radius-xl); padding:20px; backdrop-filter:blur(8px);
+    }
+    .subtle{ color:var(--muted); font-size:.93rem; }
+
+    .stats{ grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:14px; }
+    .stat{
+      background:rgba(255,255,255,0.66); border:1px solid var(--line);
+      border-radius:22px; padding:14px;
+    }
+    .stat .label{ font-size:.88rem; color:var(--muted); margin-bottom:8px; }
+    .stat .value{ font-size:clamp(1.05rem, 2.1vw, 1.7rem); font-weight:700; line-height:1.2; }
+
+    .summary-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .summary-box{
+      background:rgba(255,255,255,0.66); border:1px solid var(--line);
+      border-radius:22px; padding:14px;
+    }
+    .summary-box h3{ margin:0 0 10px; font-size:1rem; font-family:"Kiwi Maru", serif; font-weight:500; }
+    .summary-list{ display:flex; flex-direction:column; gap:8px; }
+    .summary-item{
+      display:flex; justify-content:space-between; gap:10px; padding:9px 10px; border-radius:14px;
+      background:#fffaf6; border:1px solid #efe2d6; font-size:.92rem;
+    }
+
+    .form-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:14px; }
+    .score-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); }
+    label span{ display:block; margin-bottom:6px; font-size:.9rem; color:var(--muted); }
+    input,select,textarea{
+      width:100%; padding:12px 14px; background:rgba(255,255,255,0.92); border:1px solid var(--line);
+      border-radius:16px; color:var(--text);
+    }
+    textarea{ min-height:96px; resize:vertical; }
+
+    .tag-picker{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+    .tag-chip{
+      border:1px solid #e7c7c7; background:#fff7f7; color:#7f6363; padding:9px 12px; border-radius:999px;
+      cursor:pointer; transition:.18s ease; user-select:none; font-size:.92rem;
+    }
+    .tag-chip.active{ background:var(--accent); color:white; border-color:var(--accent); transform:translateY(-1px); }
+
+    .bullet-head{
+      display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+    }
+    .bullet-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
+    .bullet-row{
+      display:grid; grid-template-columns:1.8fr .8fr .7fr auto; gap:10px; align-items:center; padding:12px;
+      border:1px solid var(--line); border-radius:18px;
+      background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,250,245,.72));
+    }
+
+    .btn,.icon-btn,.segmented button,.calendar-day{ transition:.18s ease; }
+    .btn,.icon-btn,.segmented button{ border:none; cursor:pointer; }
+    .btn{
+      padding:11px 16px; border-radius:14px; background:var(--brown-soft); border:1px solid var(--line); color:var(--text);
+    }
+    .btn:hover,.icon-btn:hover,.calendar-day:hover{ transform:translateY(-1px); }
+    .btn.primary{ background:var(--accent); color:white; border-color:var(--accent); }
+    .btn.good{ background:#9dc89d; color:white; border-color:#9dc89d; }
+    .btn.ghost{ background:rgba(255,255,255,0.8); }
+    .btn.danger{ background:#cf8d8d; color:white; border-color:#cf8d8d; }
+    .icon-btn{
+      width:42px; height:42px; border-radius:14px; background:#f5e8dc; border:1px solid var(--line); color:var(--text);
+    }
+    .actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+    .segmented{
+      display:inline-flex; gap:4px; padding:4px; border-radius:999px; background:rgba(255,255,255,.88);
+      border:1px solid var(--line); margin-bottom:14px;
+    }
+    .segmented button{ padding:9px 14px; border-radius:999px; background:transparent; color:var(--muted); }
+    .segmented button.active{ background:var(--accent); color:white; }
+
+    .timer-display{
+      text-align:center; border:1px solid var(--line); border-radius:24px; padding:20px 14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,244,244,.62)); margin-bottom:14px;
+    }
+    .timer-mode-label{ color:var(--muted); margin-bottom:8px; font-size:.94rem; }
+    .time{ font-size:clamp(2.4rem, 6vw, 4.2rem); line-height:1; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:.05em; }
+    .phase{ margin-top:10px; min-height:1.6em; color:var(--accent-strong); font-weight:700; }
+    .timer-config{ grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:14px; }
+
+    .chart-card{
+      background:rgba(255,255,255,0.68); border:1px solid var(--line); border-radius:22px; padding:14px; height:290px;
+    }
+
+    .calendar-header{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px; }
+    .calendar-title{ font-family:"Kiwi Maru", serif; font-size:1.05rem; }
+    .calendar-grid,.calendar-weekdays{
+      display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px;
+    }
+    .calendar-weekdays{ margin-bottom:8px; color:var(--muted); font-size:.88rem; text-align:center; }
+    .calendar-day{
+      min-height:78px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.74);
+      padding:8px; text-align:left; cursor:pointer; position:relative;
+    }
+    .calendar-day.outside{ opacity:.38; }
+    .calendar-day.has-log{ background:linear-gradient(180deg, #fff8f8, #fbe8e8); border-color:#e9c6c6; }
+    .calendar-day.selected{ outline:2px solid var(--accent); outline-offset:2px; }
+    .calendar-num{ font-weight:700; margin-bottom:4px; font-size:.95rem; }
+    .calendar-dot-row{ display:flex; flex-wrap:wrap; gap:4px; }
+    .calendar-dot{ width:8px; height:8px; border-radius:999px; background:var(--accent); }
+
+    .detail-panel{
+      margin-top:16px; padding:14px; border-radius:20px; background:rgba(255,255,255,.7); border:1px solid var(--line);
+    }
+    .detail-list{
+      display:flex; flex-direction:column; gap:10px; margin-top:10px; max-height:360px; overflow:auto;
+    }
+
+    .detail-item,.log-item{
+      border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.72); padding:14px;
+    }
+    .log-list{
+      display:flex; flex-direction:column; gap:12px; margin-top:10px; max-height:760px; overflow:auto; padding-right:4px;
+    }
+    .log-head,.detail-head{
+      display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:10px;
+    }
+    .date{ font-weight:700; font-size:1rem; }
+    .tag-row{ display:flex; flex-wrap:wrap; gap:8px; }
+    .mini-tag{
+      display:inline-flex; align-items:center; gap:4px; padding:6px 10px; border-radius:999px; font-size:.84rem;
+      background:#fff3f3; border:1px solid #eccbcb; color:#7e6262;
+    }
+    ul.study-points{ margin:0; padding-left:1.2rem; }
+    ul.study-points li + li{ margin-top:6px; }
+    .memo{ margin-top:10px; color:var(--muted); font-size:.94rem; }
+    .log-actions{ margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; }
+
+    .score-box{
+      margin-top:14px; padding:14px; border-radius:18px; border:1px solid var(--line); background:rgba(255,255,255,.65);
+    }
+    .empty{
+      text-align:center; padding:20px; border:1px dashed var(--line); border-radius:18px; color:var(--muted); background:rgba(255,255,255,.5);
+    }
+    .hidden{ display:none !important; }
+
+    @media (max-width: 1200px){
+      .layout{ grid-template-columns:1fr; }
+    }
+    @media (max-width: 900px){
+      .form-grid,.stats,.summary-grid,.timer-config,.goal-grid,.score-grid{ grid-template-columns:1fr; }
+    }
+    @media (max-width: 640px){
+      .bullet-row{ grid-template-columns:1fr; }
+      .calendar-day{ min-height:68px; }
+      .wrap{ padding:14px 10px 30px; }
+      .hero,.card{ padding:16px; border-radius:24px; }
+      .calendar-grid,.calendar-weekdays{ gap:6px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>TOEIC 学習ログ</h1>
+          <p>学習内容・時間・タイマー・カレンダー・模試スコアをまとめて管理できる、ローカル保存型の学習ツールです。</p>
+        </div>
+        <div class="goal-box">
+          <h2>目標設定</h2>
+          <div class="goal-grid">
+            <label>
+              <span>目標スコア</span>
+              <input type="number" id="targetScore" min="10" max="990" step="5" placeholder="例：750" />
+            </label>
+            <label>
+              <span>試験日</span>
+              <input type="date" id="examDate" />
+            </label>
+          </div>
+          <div class="actions">
+            <button class="btn primary" type="button" id="saveGoalBtn">目標を保存</button>
+          </div>
+          <div class="goal-pill-row" style="margin-top:12px;">
+            <div class="goal-pill" id="goalScoreView">目標スコア：未設定</div>
+            <div class="goal-pill" id="goalDateView">試験日：未設定</div>
+            <div class="goal-pill" id="goalCountdownView">試験まで：-</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <div class="left-col">
+        <section class="card">
+          <h2 class="section-title">学習の見える化</h2>
+          <div class="stats">
+            <div class="stat">
+              <div class="label">トータル学習時間</div>
+              <div class="value" id="totalStudyTime">0時間00分</div>
+            </div>
+            <div class="stat">
+              <div class="label">記録件数</div>
+              <div class="value" id="totalLogCount">0件</div>
+            </div>
+            <div class="stat">
+              <div class="label">今日の学習時間</div>
+              <div class="value" id="todayStudyTime">0分</div>
+            </div>
+            <div class="stat">
+              <div class="label">最高模試スコア</div>
+              <div class="value" id="bestScoreValue">-</div>
+            </div>
+          </div>
+          <div class="summary-grid">
+            <div class="summary-box">
+              <h3>週ごとの集計</h3>
+              <div class="summary-list" id="weeklySummary"></div>
+            </div>
+            <div class="summary-box">
+              <h3>月ごとの集計</h3>
+              <div class="summary-list" id="monthlySummary"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title" id="formTitle">今日の学習を記録</h2>
+          <div class="form-grid">
+            <label>
+              <span>日付</span>
+              <input type="date" id="studyDate" />
+            </label>
+            <label>
+              <span>学習カテゴリ</span>
+              <select id="studyCategory">
+                <option>語彙</option>
+                <option>文法</option>
+                <option>リスニング</option>
+                <option>リーディング</option>
+                <option>模試</option>
+                <option>過去問</option>
+                <option>復習</option>
+                <option>その他</option>
+              </select>
+            </label>
+            <label>
+              <span>今回の学習時間（分）</span>
+              <input type="number" id="studyMinutes" min="0" step="1" placeholder="自動計算" readonly />
+            </label>
+            <label>
+              <span>学習タイプ</span>
+              <select id="studyType">
+                <option value="normal">通常学習</option>
+                <option value="score">模試・過去問</option>
+              </select>
+            </label>
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <div class="subtle" style="margin-bottom:8px;">Partタグ（複数選択可）</div>
+            <div class="tag-picker" id="partTagPicker"></div>
+          </div>
+
+          <div class="bullet-head">
+            <div>
+              <div class="subtle" style="font-weight:700; color:var(--text);">学習内容</div>
+              <div class="subtle">内容ごとに学習時間も記録できます。各内容の合計がトータル時間に反映されます。</div>
+            </div>
+            <button class="btn ghost" id="addBulletBtn" type="button">＋ 項目を追加</button>
+          </div>
+
+          <div class="bullet-list" id="bulletList"></div>
+
+          <div class="score-box hidden" id="scoreBox">
+            <div class="subtle" style="margin-bottom:10px; font-weight:700; color:var(--text);">模試・過去問スコア</div>
+            <div class="score-grid">
+              <label>
+                <span>教材名</span>
+                <input type="text" id="scoreTitle" placeholder="例：公式問題集10 TEST1" />
+              </label>
+              <label>
+                <span>Listening</span>
+                <input type="number" id="scoreListening" min="0" max="495" step="5" placeholder="例：360" />
+              </label>
+              <label>
+                <span>Reading</span>
+                <input type="number" id="scoreReading" min="0" max="495" step="5" placeholder="例：320" />
+              </label>
+              <label>
+                <span>Total</span>
+                <input type="number" id="scoreTotal" min="0" max="990" step="5" placeholder="自動計算可" />
+              </label>
+            </div>
+            <div class="subtle">Listening と Reading を入れると Total は自動で補完されます。</div>
+          </div>
+
+          <label style="display:block; margin-top:14px; margin-bottom:14px;">
+            <span>ひとことメモ</span>
+            <textarea id="studyMemo" placeholder="例：Part 5 は語彙問題で迷いが多かった。明日は間違えた問題だけ復習する。"></textarea>
+          </label>
+
+          <div class="actions">
+            <button class="btn primary" id="saveLogBtn" type="button">この内容を保存</button>
+            <button class="btn" id="clearFormBtn" type="button">入力をクリア</button>
+            <button class="btn ghost hidden" id="cancelEditBtn" type="button">編集をやめる</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">学習ログ一覧</h2>
+          <div id="logList" class="log-list"></div>
+        </section>
+      </div>
+
+      <div class="right-col">
+        <section class="card">
+          <h2 class="section-title">学習タイマー</h2>
+          <div class="segmented">
+            <button id="modeNormal" class="active" type="button">通常タイマー</button>
+            <button id="modePomodoro" type="button">ポモドーロ</button>
+          </div>
+
+          <div class="timer-display">
+            <div class="timer-mode-label" id="timerModeLabel">通常タイマー</div>
+            <div class="time" id="timerDisplay">00:00:00</div>
+            <div class="phase" id="pomodoroPhase">作業時間を積み上げましょう</div>
+          </div>
+
+          <div class="timer-config" id="normalConfig">
+            <label>
+              <span>時間</span>
+              <input type="number" id="normalHours" min="0" max="99" value="0" />
+            </label>
+            <label>
+              <span>分</span>
+              <input type="number" id="normalMinutes" min="0" max="59" value="30" />
+            </label>
+          </div>
+
+          <div class="timer-config hidden" id="pomodoroConfig">
+            <label>
+              <span>作業（分）</span>
+              <input type="number" id="pomoWork" min="1" max="120" value="25" />
+            </label>
+            <label>
+              <span>休憩（分）</span>
+              <input type="number" id="pomoBreak" min="1" max="60" value="5" />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button class="btn primary" id="startTimerBtn" type="button">開始</button>
+            <button class="btn" id="pauseTimerBtn" type="button">一時停止</button>
+            <button class="btn ghost" id="resetTimerBtn" type="button">リセット</button>
+            <button class="btn good" id="addTimerToLogBtn" type="button">計測分を学習時間へ反映</button>
+          </div>
+          <p class="subtle" style="margin:12px 0 0;">計測した作業時間を、最後の学習項目に加算できます。</p>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">Part別の累計学習時間</h2>
+          <div class="chart-card">
+            <canvas id="partTimeChart"></canvas>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="section-title">模試・過去問スコア推移</h2>
+          <div class="chart-card">
+            <canvas id="scoreTrendChart"></canvas>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="calendar-header">
+            <h2 class="section-title" style="margin:0;">学習カレンダー</h2>
+            <div class="actions" style="gap:8px;">
+              <button class="btn ghost" type="button" id="prevMonthBtn">←</button>
+              <div class="calendar-title" id="calendarTitle">2026年3月</div>
+              <button class="btn ghost" type="button" id="nextMonthBtn">→</button>
+            </div>
+          </div>
+
+          <div class="calendar-weekdays">
+            <div>日</div><div>月</div><div>火</div><div>水</div><div>木</div><div>金</div><div>土</div>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+
+          <div class="detail-panel">
+            <div class="subtle">選択日</div>
+            <div style="font-family:'Kiwi Maru', serif; font-size:1.05rem; margin-top:2px;" id="selectedDateLabel">日付をクリックすると詳細が見られます</div>
+            <div class="detail-list" id="calendarDetailList"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'toeic-study-log-v3';
+    const PART_TAGS = ['Part 1','Part 2','Part 3','Part 4','Part 5','Part 6','Part 7','単語','音読','復習'];
+
+    const state = {
+      logs: [],
+      goal: { targetScore: '', examDate: '' },
+      selectedTags: [],
+      editingId: null,
+      timerMode: 'normal',
+      timerRunning: false,
+      timerSecondsLeft: 1800,
+      timerInterval: null,
+      timerCountedStudySeconds: 0,
+      pomodoroPhase: 'work',
+      calendarYear: new Date().getFullYear(),
+      calendarMonth: new Date().getMonth(),
+      selectedCalendarDate: '',
+      charts: { partTime: null, scoreTrend: null }
+    };
+
+    const els = {
+      targetScore: document.getElementById('targetScore'),
+      examDate: document.getElementById('examDate'),
+      saveGoalBtn: document.getElementById('saveGoalBtn'),
+      goalScoreView: document.getElementById('goalScoreView'),
+      goalDateView: document.getElementById('goalDateView'),
+      goalCountdownView: document.getElementById('goalCountdownView'),
+      totalStudyTime: document.getElementById('totalStudyTime'),
+      totalLogCount: document.getElementById('totalLogCount'),
+      todayStudyTime: document.getElementById('todayStudyTime'),
+      bestScoreValue: document.getElementById('bestScoreValue'),
+      weeklySummary: document.getElementById('weeklySummary'),
+      monthlySummary: document.getElementById('monthlySummary'),
+      formTitle: document.getElementById('formTitle'),
+      studyDate: document.getElementById('studyDate'),
+      studyCategory: document.getElementById('studyCategory'),
+      studyMinutes: document.getElementById('studyMinutes'),
+      studyType: document.getElementById('studyType'),
+      partTagPicker: document.getElementById('partTagPicker'),
+      bulletList: document.getElementById('bulletList'),
+      addBulletBtn: document.getElementById('addBulletBtn'),
+      scoreBox: document.getElementById('scoreBox'),
+      scoreTitle: document.getElementById('scoreTitle'),
+      scoreListening: document.getElementById('scoreListening'),
+      scoreReading: document.getElementById('scoreReading'),
+      scoreTotal: document.getElementById('scoreTotal'),
+      studyMemo: document.getElementById('studyMemo'),
+      saveLogBtn: document.getElementById('saveLogBtn'),
+      clearFormBtn: document.getElementById('clearFormBtn'),
+      cancelEditBtn: document.getElementById('cancelEditBtn'),
+      logList: document.getElementById('logList'),
+      modeNormal: document.getElementById('modeNormal'),
+      modePomodoro: document.getElementById('modePomodoro'),
+      timerModeLabel: document.getElementById('timerModeLabel'),
+      timerDisplay: document.getElementById('timerDisplay'),
+      pomodoroPhase: document.getElementById('pomodoroPhase'),
+      normalConfig: document.getElementById('normalConfig'),
+      pomodoroConfig: document.getElementById('pomodoroConfig'),
+      normalHours: document.getElementById('normalHours'),
+      normalMinutes: document.getElementById('normalMinutes'),
+      pomoWork: document.getElementById('pomoWork'),
+      pomoBreak: document.getElementById('pomoBreak'),
+      startTimerBtn: document.getElementById('startTimerBtn'),
+      pauseTimerBtn: document.getElementById('pauseTimerBtn'),
+      resetTimerBtn: document.getElementById('resetTimerBtn'),
+      addTimerToLogBtn: document.getElementById('addTimerToLogBtn'),
+      prevMonthBtn: document.getElementById('prevMonthBtn'),
+      nextMonthBtn: document.getElementById('nextMonthBtn'),
+      calendarTitle: document.getElementById('calendarTitle'),
+      calendarGrid: document.getElementById('calendarGrid'),
+      selectedDateLabel: document.getElementById('selectedDateLabel'),
+      calendarDetailList: document.getElementById('calendarDetailList'),
+      partTimeChart: document.getElementById('partTimeChart'),
+      scoreTrendChart: document.getElementById('scoreTrendChart')
+    };
+
+    function saveState(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        logs: state.logs,
+        goal: state.goal
+      }));
+    }
+
+    function loadState(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return;
+        const parsed = JSON.parse(raw);
+        state.logs = Array.isArray(parsed.logs) ? parsed.logs : [];
+        state.goal = parsed.goal || { targetScore:'', examDate:'' };
+      }catch(e){
+        console.warn('読み込み失敗', e);
+      }
+    }
+
+    function toDateInputValue(date){
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    function todayStr(){ return toDateInputValue(new Date()); }
+
+    function formatMinutes(totalMinutes){
+      const h = Math.floor(totalMinutes / 60);
+      const m = totalMinutes % 60;
+      return `${h}時間${String(m).padStart(2, '0')}分`;
+    }
+    function formatClock(totalSeconds){
+      const h = Math.floor(totalSeconds / 3600);
+      const m = Math.floor((totalSeconds % 3600) / 60);
+      const s = totalSeconds % 60;
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    }
+    function startOfWeek(dateStr){
+      const date = new Date(dateStr + 'T00:00:00');
+      const day = date.getDay();
+      const result = new Date(date);
+      result.setDate(date.getDate() - day);
+      return toDateInputValue(result);
+    }
+    function monthKey(dateStr){ return dateStr.slice(0,7); }
+
+    function escapeHtml(str){
+      return String(str)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    function renderPartTags(){
+      els.partTagPicker.innerHTML = '';
+      PART_TAGS.forEach(tag => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tag-chip' + (state.selectedTags.includes(tag) ? ' active' : '');
+        btn.textContent = tag;
+        btn.addEventListener('click', () => {
+          if(state.selectedTags.includes(tag)){
+            state.selectedTags = state.selectedTags.filter(t => t !== tag);
+          }else{
+            state.selectedTags = [...state.selectedTags, tag];
+          }
+          renderPartTags();
+        });
+        els.partTagPicker.appendChild(btn);
+      });
+    }
+
+    function createBulletRow(content='', amount='', minutes=''){
+      const row = document.createElement('div');
+      row.className = 'bullet-row';
+      row.innerHTML = `
+        <input type="text" class="bullet-content" placeholder="例：Part 5 の問題集 20問" value="${escapeHtml(content)}">
+        <input type="text" class="bullet-amount" placeholder="例：20問 / 50語 / 8ページ" value="${escapeHtml(amount)}">
+        <input type="number" class="bullet-minutes" min="0" step="1" placeholder="分" value="${escapeHtml(minutes)}">
+        <button class="icon-btn" type="button" aria-label="削除">✕</button>
+      `;
+      row.querySelector('.icon-btn').addEventListener('click', () => {
+        row.remove();
+        syncTotalMinutesFromBullets();
+        if(!els.bulletList.children.length) createBulletRow();
+      });
+      row.querySelector('.bullet-minutes').addEventListener('input', syncTotalMinutesFromBullets);
+      els.bulletList.appendChild(row);
+    }
+
+    function collectBullets(){
+      return [...els.bulletList.querySelectorAll('.bullet-row')]
+        .map(row => ({
+          content: row.querySelector('.bullet-content').value.trim(),
+          amount: row.querySelector('.bullet-amount').value.trim(),
+          minutes: Number(row.querySelector('.bullet-minutes').value || 0)
+        }))
+        .filter(item => item.content || item.amount || item.minutes);
+    }
+
+    function syncTotalMinutesFromBullets(){
+      const total = collectBullets().reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+      els.studyMinutes.value = total ? total : '';
+    }
+
+    function toggleScoreBox(){
+      const show = els.studyType.value === 'score';
+      els.scoreBox.classList.toggle('hidden', !show);
+    }
+
+    function autoFillScoreTotal(){
+      const l = Number(els.scoreListening.value || 0);
+      const r = Number(els.scoreReading.value || 0);
+      if(l || r) els.scoreTotal.value = l + r;
+    }
+
+    function clearForm(){
+      state.editingId = null;
+      els.formTitle.textContent = '今日の学習を記録';
+      els.saveLogBtn.textContent = 'この内容を保存';
+      els.cancelEditBtn.classList.add('hidden');
+
+      els.studyDate.value = todayStr();
+      els.studyCategory.value = '語彙';
+      els.studyType.value = 'normal';
+      els.studyMinutes.value = '';
+      els.studyMemo.value = '';
+      els.scoreTitle.value = '';
+      els.scoreListening.value = '';
+      els.scoreReading.value = '';
+      els.scoreTotal.value = '';
+      state.selectedTags = [];
+      renderPartTags();
+      toggleScoreBox();
+
+      els.bulletList.innerHTML = '';
+      createBulletRow();
+    }
+
+    function renderGoal(){
+      els.targetScore.value = state.goal.targetScore || '';
+      els.examDate.value = state.goal.examDate || '';
+      els.goalScoreView.textContent = `目標スコア：${state.goal.targetScore ? state.goal.targetScore + '点' : '未設定'}`;
+      els.goalDateView.textContent = `試験日：${state.goal.examDate || '未設定'}`;
+
+      if(!state.goal.examDate){
+        els.goalCountdownView.textContent = '試験まで：-';
+        return;
+      }
+      const today = new Date(todayStr() + 'T00:00:00');
+      const exam = new Date(state.goal.examDate + 'T00:00:00');
+      const diff = Math.ceil((exam - today) / (1000 * 60 * 60 * 24));
+      if(diff > 0) els.goalCountdownView.textContent = `試験まで：あと${diff}日`;
+      else if(diff === 0) els.goalCountdownView.textContent = '試験まで：今日です';
+      else els.goalCountdownView.textContent = `試験まで：${Math.abs(diff)}日経過`;
+    }
+
+    function saveGoal(){
+      state.goal.targetScore = els.targetScore.value || '';
+      state.goal.examDate = els.examDate.value || '';
+      saveState();
+      renderGoal();
+      alert('目標を保存しました。');
+    }
+
+    function getScoreEntries(){
+      return state.logs
+        .filter(log => log.score && (Number(log.score.total) || Number(log.score.listening) || Number(log.score.reading)))
+        .sort((a,b) => a.date === b.date ? (a.createdAt < b.createdAt ? -1 : 1) : (a.date < b.date ? -1 : 1));
+    }
+
+    function renderGroupedSummary(){
+      const weeklyMap = new Map();
+      const monthlyMap = new Map();
+
+      state.logs.forEach(log => {
+        const week = startOfWeek(log.date);
+        const month = monthKey(log.date);
+        weeklyMap.set(week, (weeklyMap.get(week) || 0) + Number(log.minutes || 0));
+        monthlyMap.set(month, (monthlyMap.get(month) || 0) + Number(log.minutes || 0));
+      });
+
+      const weekly = [...weeklyMap.entries()].sort((a,b) => a[0] < b[0] ? 1 : -1).slice(0,5);
+      const monthly = [...monthlyMap.entries()].sort((a,b) => a[0] < b[0] ? 1 : -1).slice(0,5);
+
+      els.weeklySummary.innerHTML = weekly.length
+        ? weekly.map(([key, minutes]) => `<div class="summary-item"><span>${escapeHtml(key)}週</span><strong>${formatMinutes(minutes)}</strong></div>`).join('')
+        : '<div class="empty">まだ集計がありません</div>';
+
+      els.monthlySummary.innerHTML = monthly.length
+        ? monthly.map(([key, minutes]) => `<div class="summary-item"><span>${escapeHtml(key)}</span><strong>${formatMinutes(minutes)}</strong></div>`).join('')
+        : '<div class="empty">まだ集計がありません</div>';
+    }
+
+    function renderStats(){
+      const totalMinutes = state.logs.reduce((sum, log) => sum + Number(log.minutes || 0), 0);
+      const todayMinutes = state.logs
+        .filter(log => log.date === todayStr())
+        .reduce((sum, log) => sum + Number(log.minutes || 0), 0);
+      const scoreEntries = getScoreEntries();
+      const bestScore = scoreEntries.length ? Math.max(...scoreEntries.map(log => Number(log.score.total || 0))) : 0;
+
+      els.totalStudyTime.textContent = formatMinutes(totalMinutes);
+      els.totalLogCount.textContent = `${state.logs.length}件`;
+      els.todayStudyTime.textContent = `${todayMinutes}分`;
+      els.bestScoreValue.textContent = bestScore ? `${bestScore}点` : '-';
+      renderGroupedSummary();
+    }
+
+    function logsByDate(dateStr){
+      return state.logs
+        .filter(log => log.date === dateStr)
+        .sort((a,b) => a.createdAt < b.createdAt ? 1 : -1);
+    }
+
+    function buildScoreObject(){
+      const listening = Number(els.scoreListening.value || 0);
+      const reading = Number(els.scoreReading.value || 0);
+      const totalInput = Number(els.scoreTotal.value || 0);
+      const total = totalInput || (listening + reading);
+      const title = els.scoreTitle.value.trim();
+      if(!title && !listening && !reading && !total) return null;
+      return { title, listening, reading, total };
+    }
+
+    function saveLog(){
+      const items = collectBullets();
+      const minutes = items.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+      const memo = els.studyMemo.value.trim();
+      const score = buildScoreObject();
+
+      if(!items.length && !minutes && !memo && !score){
+        alert('学習内容・メモ・スコアのいずれかを入力してください。');
+        return;
+      }
+
+      const existing = state.logs.find(log => log.id === state.editingId);
+      const payload = {
+        id: state.editingId || crypto.randomUUID(),
+        date: els.studyDate.value || todayStr(),
+        category: els.studyCategory.value,
+        studyType: els.studyType.value,
+        minutes,
+        tags: [...state.selectedTags],
+        items,
+        memo,
+        score,
+        createdAt: existing?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      if(state.editingId){
+        state.logs = state.logs.map(log => log.id === state.editingId ? payload : log);
+      }else{
+        state.logs.push(payload);
+      }
+
+      saveState();
+      const savedDate = payload.date;
+      clearForm();
+      state.selectedCalendarDate = savedDate;
+      renderAll();
+      alert(existing ? '学習ログを更新しました。' : '学習ログを保存しました。');
+    }
+
+    function startEdit(id){
+      const log = state.logs.find(item => item.id === id);
+      if(!log) return;
+
+      state.editingId = id;
+      els.formTitle.textContent = '学習ログを編集';
+      els.saveLogBtn.textContent = '更新する';
+      els.cancelEditBtn.classList.remove('hidden');
+
+      els.studyDate.value = log.date;
+      els.studyCategory.value = log.category;
+      els.studyType.value = log.studyType || (log.score ? 'score' : 'normal');
+      state.selectedTags = [...(log.tags || [])];
+      renderPartTags();
+
+      els.bulletList.innerHTML = '';
+      if(log.items?.length){
+        log.items.forEach(item => createBulletRow(item.content || '', item.amount || '', item.minutes || ''));
+      }else{
+        createBulletRow();
+      }
+      syncTotalMinutesFromBullets();
+      els.studyMemo.value = log.memo || '';
+
+      els.scoreTitle.value = log.score?.title || '';
+      els.scoreListening.value = log.score?.listening || '';
+      els.scoreReading.value = log.score?.reading || '';
+      els.scoreTotal.value = log.score?.total || '';
+      toggleScoreBox();
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function deleteLog(id){
+      const log = state.logs.find(item => item.id === id);
+      if(!log) return;
+      if(!confirm(`${log.date} の記録を削除しますか？`)) return;
+
+      state.logs = state.logs.filter(item => item.id !== id);
+      if(state.editingId === id) clearForm();
+      saveState();
+      renderAll();
+    }
+
+    function renderLogs(){
+      const logs = [...state.logs].sort((a,b) => a.createdAt < b.createdAt ? 1 : -1);
+      els.logList.innerHTML = '';
+      if(!logs.length){
+        els.logList.innerHTML = '<div class="empty">まだ学習ログはありません。最初の1件を記録してみましょう。</div>';
+        return;
+      }
+
+      logs.forEach(log => {
+        const card = document.createElement('article');
+        card.className = 'log-item';
+
+        const points = log.items?.length
+          ? log.items.map(item => `<li>${escapeHtml(item.content || '内容未記入')}${item.amount ? ` <small>（${escapeHtml(item.amount)}）</small>` : ''}${item.minutes ? ` <small>・${escapeHtml(item.minutes)}分</small>` : ''}</li>`).join('')
+          : '<li>内容の記録なし</li>';
+        const tags = [log.category, `${log.minutes}分`, ...(log.tags || [])];
+        const scoreHtml = log.score && (log.score.title || log.score.total || log.score.listening || log.score.reading)
+          ? `<div class="memo"><strong>スコア：</strong>${escapeHtml(log.score.title || '模試・過去問')} / L ${escapeHtml(log.score.listening || '-')} / R ${escapeHtml(log.score.reading || '-')} / Total ${escapeHtml(log.score.total || '-')}</div>`
+          : '';
+
+        card.innerHTML = `
+          <div class="log-head">
+            <div class="date">${escapeHtml(log.date)}</div>
+            <div class="tag-row">
+              ${tags.map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('')}
+            </div>
+          </div>
+          <ul class="study-points">${points}</ul>
+          ${scoreHtml}
+          ${log.memo ? `<div class="memo">${escapeHtml(log.memo)}</div>` : ''}
+          <div class="log-actions">
+            <button class="btn ghost edit-btn" type="button">編集</button>
+            <button class="btn danger delete-btn" type="button">削除</button>
+          </div>
+        `;
+        card.querySelector('.edit-btn').addEventListener('click', () => startEdit(log.id));
+        card.querySelector('.delete-btn').addEventListener('click', () => deleteLog(log.id));
+        els.logList.appendChild(card);
+      });
+    }
+
+    function renderCalendar(){
+      const year = state.calendarYear;
+      const month = state.calendarMonth;
+      els.calendarTitle.textContent = `${year}年${month + 1}月`;
+      els.calendarGrid.innerHTML = '';
+
+      const firstDay = new Date(year, month, 1);
+      const startDay = firstDay.getDay();
+      const startDate = new Date(year, month, 1 - startDay);
+
+      for(let i=0; i<42; i++){
+        const current = new Date(startDate);
+        current.setDate(startDate.getDate() + i);
+        const dateStr = toDateInputValue(current);
+        const dayLogs = logsByDate(dateStr);
+        const isCurrentMonth = current.getMonth() === month;
+        const isSelected = state.selectedCalendarDate === dateStr;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'calendar-day'
+          + (isCurrentMonth ? '' : ' outside')
+          + (dayLogs.length ? ' has-log' : '')
+          + (isSelected ? ' selected' : '');
+
+        btn.innerHTML = `
+          <div class="calendar-num">${current.getDate()}</div>
+          <div class="calendar-dot-row">${dayLogs.slice(0,4).map(() => '<span class="calendar-dot"></span>').join('')}</div>
+        `;
+
+        btn.addEventListener('click', () => {
+          state.selectedCalendarDate = dateStr;
+          if(!isCurrentMonth){
+            state.calendarYear = current.getFullYear();
+            state.calendarMonth = current.getMonth();
+          }
+          renderCalendar();
+          renderCalendarDetail();
+        });
+        els.calendarGrid.appendChild(btn);
+      }
+    }
+
+    function renderCalendarDetail(){
+      const dateStr = state.selectedCalendarDate;
+      if(!dateStr){
+        els.selectedDateLabel.textContent = '日付をクリックすると詳細が見られます';
+        els.calendarDetailList.innerHTML = '<div class="empty">まだ日付が選択されていません</div>';
+        return;
+      }
+      const logs = logsByDate(dateStr);
+      els.selectedDateLabel.textContent = dateStr;
+      if(!logs.length){
+        els.calendarDetailList.innerHTML = '<div class="empty">この日の記録はありません</div>';
+        return;
+      }
+
+      els.calendarDetailList.innerHTML = logs.map(log => {
+        const points = log.items?.length
+          ? `<ul class="study-points">${log.items.map(item => `<li>${escapeHtml(item.content || '内容未記入')}${item.amount ? ` <small>（${escapeHtml(item.amount)}）</small>` : ''}${item.minutes ? ` <small>・${escapeHtml(item.minutes)}分</small>` : ''}</li>`).join('')}</ul>`
+          : '<div class="subtle">内容の記録なし</div>';
+        const tags = [log.category, `${log.minutes}分`, ...(log.tags || [])];
+        const scoreHtml = log.score
+          ? `<div class="memo"><strong>スコア：</strong>${escapeHtml(log.score.title || '模試・過去問')} / L ${escapeHtml(log.score.listening || '-')} / R ${escapeHtml(log.score.reading || '-')} / Total ${escapeHtml(log.score.total || '-')}</div>`
+          : '';
+        return `
+          <div class="detail-item">
+            <div class="detail-head">
+              <div class="date">${escapeHtml(log.category)}</div>
+              <div class="tag-row">${tags.map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('')}</div>
+            </div>
+            ${points}
+            ${scoreHtml}
+            ${log.memo ? `<div class="memo">${escapeHtml(log.memo)}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPartTimeChart(){
+      const map = new Map();
+      PART_TAGS.forEach(tag => map.set(tag, 0));
+
+      state.logs.forEach(log => {
+        const tags = (log.tags && log.tags.length) ? log.tags : ['未分類'];
+        const total = Number(log.minutes || 0);
+        const share = total / tags.length;
+        tags.forEach(tag => {
+          if(!map.has(tag)) map.set(tag, 0);
+          map.set(tag, map.get(tag) + share);
+        });
+      });
+
+      const labels = [...map.keys()];
+      const data = labels.map(label => Math.round(map.get(label)));
+
+      if(state.charts.partTime) state.charts.partTime.destroy();
+      state.charts.partTime = new Chart(els.partTimeChart, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: '学習時間（分）',
+            data
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function renderScoreTrendChart(){
+      const scoreEntries = getScoreEntries();
+      const labels = scoreEntries.map(log => `${log.date} ${log.score.title || ''}`.trim());
+      const totalData = scoreEntries.map(log => Number(log.score.total || 0));
+      const listeningData = scoreEntries.map(log => Number(log.score.listening || 0));
+      const readingData = scoreEntries.map(log => Number(log.score.reading || 0));
+
+      if(state.charts.scoreTrend) state.charts.scoreTrend.destroy();
+      state.charts.scoreTrend = new Chart(els.scoreTrendChart, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Total', data: totalData, tension: 0.25 },
+            { label: 'Listening', data: listeningData, tension: 0.25 },
+            { label: 'Reading', data: readingData, tension: 0.25 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+
+    function applyMode(mode){
+      state.timerMode = mode;
+      els.modeNormal.classList.toggle('active', mode === 'normal');
+      els.modePomodoro.classList.toggle('active', mode === 'pomodoro');
+      els.normalConfig.classList.toggle('hidden', mode !== 'normal');
+      els.pomodoroConfig.classList.toggle('hidden', mode !== 'pomodoro');
+      els.timerModeLabel.textContent = mode === 'normal' ? '通常タイマー' : 'ポモドーロ';
+      resetTimer();
+    }
+
+    function getConfiguredSeconds(){
+      if(state.timerMode === 'normal'){
+        const h = Math.max(0, Number(els.normalHours.value || 0));
+        const m = Math.max(0, Number(els.normalMinutes.value || 0));
+        return h * 3600 + m * 60;
+      }
+      return Math.max(1, Number(els.pomoWork.value || 25)) * 60;
+    }
+
+    function updateTimerDisplay(){
+      els.timerDisplay.textContent = formatClock(state.timerSecondsLeft);
+      els.pomodoroPhase.textContent = state.timerMode === 'normal'
+        ? '作業時間を積み上げましょう'
+        : (state.pomodoroPhase === 'work' ? '作業時間' : '休憩時間');
+    }
+
+    function startTimer(){
+      if(state.timerRunning) return;
+      if(state.timerSecondsLeft <= 0) resetTimer();
+      state.timerRunning = true;
+      state.timerInterval = setInterval(() => {
+        if(state.timerSecondsLeft > 0){
+          state.timerSecondsLeft -= 1;
+          if(state.timerMode === 'normal' || state.pomodoroPhase === 'work'){
+            state.timerCountedStudySeconds += 1;
+          }
+          updateTimerDisplay();
+          return;
+        }
+        if(state.timerMode === 'pomodoro'){
+          if(state.pomodoroPhase === 'work'){
+            state.pomodoroPhase = 'break';
+            state.timerSecondsLeft = Math.max(1, Number(els.pomoBreak.value || 5)) * 60;
+          }else{
+            state.pomodoroPhase = 'work';
+            state.timerSecondsLeft = Math.max(1, Number(els.pomoWork.value || 25)) * 60;
+          }
+          updateTimerDisplay();
+        }else{
+          pauseTimer();
+        }
+      }, 1000);
+    }
+
+    function pauseTimer(){
+      state.timerRunning = false;
+      clearInterval(state.timerInterval);
+      state.timerInterval = null;
+    }
+
+    function resetTimer(){
+      pauseTimer();
+      state.pomodoroPhase = 'work';
+      state.timerSecondsLeft = getConfiguredSeconds();
+      updateTimerDisplay();
+    }
+
+    function addTimerToCurrentBullet(){
+      const countedMinutes = Math.floor(state.timerCountedStudySeconds / 60);
+      if(countedMinutes <= 0){
+        alert('反映できる計測時間がまだありません。');
+        return;
+      }
+      const rows = [...els.bulletList.querySelectorAll('.bullet-row')];
+      if(!rows.length) createBulletRow();
+      const lastRow = [...els.bulletList.querySelectorAll('.bullet-row')].slice(-1)[0];
+      const minuteInput = lastRow.querySelector('.bullet-minutes');
+      minuteInput.value = Number(minuteInput.value || 0) + countedMinutes;
+      state.timerCountedStudySeconds = 0;
+      syncTotalMinutesFromBullets();
+      alert(`${countedMinutes}分を最後の学習項目に追加しました。`);
+    }
+
+    function renderAll(){
+      renderGoal();
+      renderStats();
+      renderLogs();
+      renderCalendar();
+      renderCalendarDetail();
+      renderPartTimeChart();
+      renderScoreTrendChart();
+    }
+
+    els.saveGoalBtn.addEventListener('click', saveGoal);
+    els.addBulletBtn.addEventListener('click', () => createBulletRow());
+    els.saveLogBtn.addEventListener('click', saveLog);
+    els.clearFormBtn.addEventListener('click', clearForm);
+    els.cancelEditBtn.addEventListener('click', clearForm);
+    els.studyType.addEventListener('change', toggleScoreBox);
+    els.scoreListening.addEventListener('input', autoFillScoreTotal);
+    els.scoreReading.addEventListener('input', autoFillScoreTotal);
+
+    els.modeNormal.addEventListener('click', () => applyMode('normal'));
+    els.modePomodoro.addEventListener('click', () => applyMode('pomodoro'));
+    els.startTimerBtn.addEventListener('click', startTimer);
+    els.pauseTimerBtn.addEventListener('click', pauseTimer);
+    els.resetTimerBtn.addEventListener('click', resetTimer);
+    els.addTimerToLogBtn.addEventListener('click', addTimerToCurrentBullet);
+
+    [els.normalHours, els.normalMinutes, els.pomoWork, els.pomoBreak].forEach(input => {
+      input.addEventListener('change', () => {
+        if(!state.timerRunning) resetTimer();
+      });
+    });
+
+    els.prevMonthBtn.addEventListener('click', () => {
+      const d = new Date(state.calendarYear, state.calendarMonth - 1, 1);
+      state.calendarYear = d.getFullYear();
+      state.calendarMonth = d.getMonth();
+      renderCalendar();
+    });
+    els.nextMonthBtn.addEventListener('click', () => {
+      const d = new Date(state.calendarYear, state.calendarMonth + 1, 1);
+      state.calendarYear = d.getFullYear();
+      state.calendarMonth = d.getMonth();
+      renderCalendar();
+    });
+
+    loadState();
+    clearForm();
+    state.selectedCalendarDate = todayStr();
+    renderAll();
+    resetTimer();
+  </script>
+</body>
+</html>
