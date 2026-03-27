@@ -327,6 +327,7 @@
           <div style="margin-bottom:12px;">
             <div class="subtle" style="margin-bottom:8px;">Partタグ（複数選択可）</div>
             <div class="tag-picker" id="partTagPicker"></div>
+            <input type="text" id="customTagInput" placeholder="自由タグ（カンマ区切り） 例：精読, 苦手克服" style="margin-top:8px;">
           </div>
 
           <div class="bullet-head">
@@ -466,7 +467,7 @@
 
   <script>
     const STORAGE_KEY = 'toeic-study-log-v3';
-    const PART_TAGS = ['Part 1','Part 2','Part 3','Part 4','Part 5','Part 6','Part 7','単語','音読','復習'];
+    const PART_TAGS = ['Part 1','Part 2','Part 3','Part 4','Part 5','Part 6','Part 7','単語','文法','復習'];
 
     const state = {
       logs: [],
@@ -504,6 +505,7 @@
       studyMinutes: document.getElementById('studyMinutes'),
       studyType: document.getElementById('studyType'),
       partTagPicker: document.getElementById('partTagPicker'),
+      customTagInput: document.getElementById('customTagInput'),
       bulletList: document.getElementById('bulletList'),
       addBulletBtn: document.getElementById('addBulletBtn'),
       scoreBox: document.getElementById('scoreBox'),
@@ -673,6 +675,7 @@
       els.scoreListening.value = '';
       els.scoreReading.value = '';
       els.scoreTotal.value = '';
+      els.customTagInput.value = '';
       state.selectedTags = [];
       renderPartTags();
       toggleScoreBox();
@@ -779,13 +782,17 @@
       }
 
       const existing = state.logs.find(log => log.id === state.editingId);
+      const customTags = document.getElementById('customTagInput').value
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t);
       const payload = {
         id: state.editingId || crypto.randomUUID(),
         date: els.studyDate.value || todayStr(),
         category: els.studyCategory.value,
         studyType: els.studyType.value,
         minutes,
-        tags: [...state.selectedTags],
+        tags: [...state.selectedTags, ...customTags],
         items,
         memo,
         score,
