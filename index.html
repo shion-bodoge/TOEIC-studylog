@@ -852,7 +852,8 @@
     }
 
     function renderLogs(){
-      const logs = [...state.logs].sort((a,b) => a.createdAt < b.createdAt ? 1 : -1);
+      const logs = [...state.logs].sort((a,b) => a.createdAt < b.createdAt ? 1 : -1)
+      .slice(0, 5);
       els.logList.innerHTML = '';
       if(!logs.length){
         els.logList.innerHTML = '<div class="empty">まだ学習ログはありません。最初の1件を記録してみましょう。</div>';
