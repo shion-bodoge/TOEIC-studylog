@@ -426,6 +426,24 @@
           <p class="subtle" style="margin:12px 0 0;">計測した作業時間を、最後の学習項目に加算できます。</p>
         </section>
 
+
+        <section class="card">
+          <h2 class="section-title">英単語 発音チェック</h2>
+          <label style="display:block; margin-bottom:12px;">
+            <span>単語を入力</span>
+            <input type="text" id="wordSearchInput" placeholder="例：environment" />
+          </label>
+
+          <div class="actions">
+            <button class="btn primary" type="button" id="playWordBtn">発音を再生</button>
+            <button class="btn ghost" type="button" id="clearWordBtn">クリア</button>
+          </div>
+
+          <p class="subtle" id="wordSearchStatus" style="margin:12px 0 0;">
+            入力した英単語の発音を再生できます。
+          </p>
+        </section>
+
         <section class="card">
           <h2 class="section-title">Part別の累計学習時間</h2>
           <div class="chart-card">
@@ -540,7 +558,11 @@
       selectedDateLabel: document.getElementById('selectedDateLabel'),
       calendarDetailList: document.getElementById('calendarDetailList'),
       partTimeChart: document.getElementById('partTimeChart'),
-      scoreTrendChart: document.getElementById('scoreTrendChart')
+      scoreTrendChart: document.getElementById('scoreTrendChart'),
+      wordSearchInput: document.getElementById('wordSearchInput'),
+      playWordBtn: document.getElementById('playWordBtn'),
+      clearWordBtn: document.getElementById('clearWordBtn'),
+      wordSearchStatus: document.getElementById('wordSearchStatus')
     };
 
     function saveState(){
@@ -595,6 +617,77 @@
         .replace(/&/g,'&amp;').replace(/</g,'&lt;')
         .replace(/>/g,'&gt;').replace(/"/g,'&quot;')
         .replace(/'/g,'&#039;');
+    }
+
+
+    function playBeep(){
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const ctx = new AudioContextClass();
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+      gainNode.gain.setValueAtTime(0.001, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + 0.18);
+    }
+
+    function speakWord(){
+      const word = els.wordSearchInput.value.trim();
+      if(!word){
+        els.wordSearchStatus.textContent = '単語を入力してください。';
+        return;
+      }
+
+      if(!('speechSynthesis' in window)){
+        els.wordSearchStatus.textContent = 'このブラウザでは音声再生に対応していません。';
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(word);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const englishVoice =
+        voices.find(v => v.lang === 'en-US') ||
+        voices.find(v => v.lang.startsWith('en'));
+
+      if(englishVoice){
+        utterance.voice = englishVoice;
+      }
+
+      utterance.onstart = () => {
+        els.wordSearchStatus.textContent = `「${word}」を再生中です。`;
+      };
+      utterance.onend = () => {
+        els.wordSearchStatus.textContent = `「${word}」の再生が終わりました。`;
+      };
+      utterance.onerror = () => {
+        els.wordSearchStatus.textContent = '発音の再生に失敗しました。';
+      };
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function clearWordSearch(){
+      if('speechSynthesis' in window){
+        window.speechSynthesis.cancel();
+      }
+      els.wordSearchInput.value = '';
+      els.wordSearchStatus.textContent = '入力した英単語の発音を再生できます。';
     }
 
     function renderPartTags(){
@@ -675,7 +768,7 @@
       els.scoreListening.value = '';
       els.scoreReading.value = '';
       els.scoreTotal.value = '';
-      els.customTagInput.value = '';
+      if (els.customTagInput) els.customTagInput.value = '';
       state.selectedTags = [];
       renderPartTags();
       toggleScoreBox();
@@ -782,7 +875,7 @@
       }
 
       const existing = state.logs.find(log => log.id === state.editingId);
-      const customTags = document.getElementById('customTagInput').value
+      const customTags = (els.customTagInput?.value || '')
         .split(',')
         .map(t => t.trim())
         .filter(t => t);
@@ -826,7 +919,11 @@
       els.studyDate.value = log.date;
       els.studyCategory.value = log.category;
       els.studyType.value = log.studyType || (log.score ? 'score' : 'normal');
-      state.selectedTags = [...(log.tags || [])];
+      const logTags = [...(log.tags || [])];
+      state.selectedTags = logTags.filter(tag => PART_TAGS.includes(tag));
+      if (els.customTagInput) {
+        els.customTagInput.value = logTags.filter(tag => !PART_TAGS.includes(tag)).join(', ');
+      }
       renderPartTags();
 
       els.bulletList.innerHTML = '';
@@ -1081,6 +1178,7 @@
           return;
         }
         if(state.timerMode === 'pomodoro'){
+          playBeep();
           if(state.pomodoroPhase === 'work'){
             state.pomodoroPhase = 'break';
             state.timerSecondsLeft = Math.max(1, Number(els.pomoBreak.value || 5)) * 60;
@@ -1090,6 +1188,7 @@
           }
           updateTimerDisplay();
         }else{
+          playBeep();
           pauseTimer();
         }
       }, 1000);
@@ -1135,6 +1234,14 @@
     }
 
     els.saveGoalBtn.addEventListener('click', saveGoal);
+    els.playWordBtn.addEventListener('click', speakWord);
+    els.clearWordBtn.addEventListener('click', clearWordSearch);
+    els.wordSearchInput.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        speakWord();
+      }
+    });
     els.addBulletBtn.addEventListener('click', () => createBulletRow());
     els.saveLogBtn.addEventListener('click', saveLog);
     els.clearFormBtn.addEventListener('click', clearForm);
