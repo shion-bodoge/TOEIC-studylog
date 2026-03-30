@@ -97,7 +97,7 @@
       background:#fffaf6; border:1px solid #efe2d6; font-size:.92rem;
     }
 
-    .form-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); margin-bottom:14px; }
+    .form-grid{ grid-template-columns:repeat(3,minmax(0,1fr)); margin-bottom:14px; }
     .score-grid{ grid-template-columns:repeat(4,minmax(0,1fr)); }
     label span{ display:block; margin-bottom:6px; font-size:.9rem; color:var(--muted); }
     input,select,textarea{
@@ -299,19 +299,6 @@
               <input type="date" id="studyDate" />
             </label>
             <label>
-              <span>学習カテゴリ</span>
-              <select id="studyCategory">
-                <option>語彙</option>
-                <option>文法</option>
-                <option>リスニング</option>
-                <option>リーディング</option>
-                <option>模試</option>
-                <option>過去問</option>
-                <option>復習</option>
-                <option>その他</option>
-              </select>
-            </label>
-            <label>
               <span>今回の学習時間（分）</span>
               <input type="number" id="studyMinutes" min="0" step="1" placeholder="自動計算" readonly />
             </label>
@@ -327,7 +314,6 @@
           <div style="margin-bottom:12px;">
             <div class="subtle" style="margin-bottom:8px;">Partタグ（複数選択可）</div>
             <div class="tag-picker" id="partTagPicker"></div>
-            <input type="text" id="customTagInput" placeholder="自由タグ（カンマ区切り） 例：精読, 苦手克服" style="margin-top:8px;">
           </div>
 
           <div class="bullet-head">
@@ -519,7 +505,6 @@
       monthlySummary: document.getElementById('monthlySummary'),
       formTitle: document.getElementById('formTitle'),
       studyDate: document.getElementById('studyDate'),
-      studyCategory: document.getElementById('studyCategory'),
       studyMinutes: document.getElementById('studyMinutes'),
       studyType: document.getElementById('studyType'),
       partTagPicker: document.getElementById('partTagPicker'),
@@ -760,7 +745,6 @@
       els.cancelEditBtn.classList.add('hidden');
 
       els.studyDate.value = todayStr();
-      els.studyCategory.value = '語彙';
       els.studyType.value = 'normal';
       els.studyMinutes.value = '';
       els.studyMemo.value = '';
@@ -768,7 +752,6 @@
       els.scoreListening.value = '';
       els.scoreReading.value = '';
       els.scoreTotal.value = '';
-      if (els.customTagInput) els.customTagInput.value = '';
       state.selectedTags = [];
       renderPartTags();
       toggleScoreBox();
@@ -864,7 +847,12 @@
     }
 
     function saveLog(){
-      const items = collectBullets();
+      const rawItems = collectBullets();
+      const globalTags = [...state.selectedTags];
+      const items = rawItems.map(item => ({
+        ...item,
+        tags: globalTags
+      }));
       const minutes = items.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
       const memo = els.studyMemo.value.trim();
       const score = buildScoreObject();
@@ -874,28 +862,50 @@
         return;
       }
 
-      const existing = state.logs.find(log => log.id === state.editingId);
-      const customTags = (els.customTagInput?.value || '')
-        .split(',')
-        .map(t => t.trim())
-        .filter(t => t);
-      const payload = {
-        id: state.editingId || crypto.randomUUID(),
-        date: els.studyDate.value || todayStr(),
-        category: els.studyCategory.value,
-        studyType: els.studyType.value,
-        minutes,
-        tags: [...state.selectedTags, ...customTags],
-        items,
-        memo,
-        score,
-        createdAt: existing?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+      const targetDate = els.studyDate.value || todayStr();
+      const existingById = state.logs.find(log => log.id === state.editingId);
+      const existingByDate = state.logs.find(log => log.date === targetDate);
 
-      if(state.editingId){
+      let payload;
+
+      if(state.editingId && existingById){
+        payload = {
+          ...existingById,
+          date: targetDate,
+          studyType: els.studyType.value,
+          items,
+          minutes,
+          memo,
+          score,
+          updatedAt: new Date().toISOString()
+        };
         state.logs = state.logs.map(log => log.id === state.editingId ? payload : log);
+      }else if(existingByDate){
+        const combinedItems = [...(existingByDate.items || []), ...items];
+        const combinedMinutes = combinedItems.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
+        const combinedMemo = [existingByDate.memo, memo].filter(Boolean).join('\\n');
+        payload = {
+          ...existingByDate,
+          studyType: score ? 'score' : existingByDate.studyType,
+          items: combinedItems,
+          minutes: combinedMinutes,
+          memo: combinedMemo,
+          score: score || existingByDate.score || null,
+          updatedAt: new Date().toISOString()
+        };
+        state.logs = state.logs.map(log => log.date === targetDate ? payload : log);
       }else{
+        payload = {
+          id: crypto.randomUUID(),
+          date: targetDate,
+          studyType: els.studyType.value,
+          minutes,
+          items,
+          memo,
+          score,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
         state.logs.push(payload);
       }
 
@@ -904,7 +914,7 @@
       clearForm();
       state.selectedCalendarDate = savedDate;
       renderAll();
-      alert(existing ? '学習ログを更新しました。' : '学習ログを保存しました。');
+      alert(state.editingId ? '学習ログを更新しました。' : '学習内容を保存しました。');
     }
 
     function startEdit(id){
@@ -912,23 +922,22 @@
       if(!log) return;
 
       state.editingId = id;
-      els.formTitle.textContent = '学習ログを編集';
+      els.formTitle.textContent = '1日の記録を編集';
       els.saveLogBtn.textContent = '更新する';
       els.cancelEditBtn.classList.remove('hidden');
 
       els.studyDate.value = log.date;
-      els.studyCategory.value = log.category;
       els.studyType.value = log.studyType || (log.score ? 'score' : 'normal');
-      const logTags = [...(log.tags || [])];
-      state.selectedTags = logTags.filter(tag => PART_TAGS.includes(tag));
-      if (els.customTagInput) {
-        els.customTagInput.value = logTags.filter(tag => !PART_TAGS.includes(tag)).join(', ');
-      }
+      state.selectedTags = [...((log.items && log.items[0] && log.items[0].tags) || [])];
       renderPartTags();
 
       els.bulletList.innerHTML = '';
       if(log.items?.length){
-        log.items.forEach(item => createBulletRow(item.content || '', item.amount || '', item.minutes || ''));
+        log.items.forEach(item => createBulletRow(
+          item.content || '',
+          item.amount || '',
+          item.minutes || ''
+        ));
       }else{
         createBulletRow();
       }
@@ -956,8 +965,7 @@
     }
 
     function renderLogs(){
-      const logs = [...state.logs].sort((a,b) => a.createdAt < b.createdAt ? 1 : -1)
-      .slice(0, 5);
+      const logs = [...state.logs].sort((a,b) => a.date < b.date ? 1 : -1).slice(0, 5);
       els.logList.innerHTML = '';
       if(!logs.length){
         els.logList.innerHTML = '<div class="empty">まだ学習ログはありません。最初の1件を記録してみましょう。</div>';
@@ -971,7 +979,9 @@
         const points = log.items?.length
           ? log.items.map(item => `<li>${escapeHtml(item.content || '内容未記入')}${item.amount ? ` <small>（${escapeHtml(item.amount)}）</small>` : ''}${item.minutes ? ` <small>・${escapeHtml(item.minutes)}分</small>` : ''}</li>`).join('')
           : '<li>内容の記録なし</li>';
-        const tags = [log.category, `${log.minutes}分`, ...(log.tags || [])];
+
+        const allTags = Array.from(new Set((log.items || []).flatMap(item => item.tags || [])));
+
         const scoreHtml = log.score && (log.score.title || log.score.total || log.score.listening || log.score.reading)
           ? `<div class="memo"><strong>スコア：</strong>${escapeHtml(log.score.title || '模試・過去問')} / L ${escapeHtml(log.score.listening || '-')} / R ${escapeHtml(log.score.reading || '-')} / Total ${escapeHtml(log.score.total || '-')}</div>`
           : '';
@@ -980,12 +990,14 @@
           <div class="log-head">
             <div class="date">${escapeHtml(log.date)}</div>
             <div class="tag-row">
-              ${tags.map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('')}
+              <span class="mini-tag">${escapeHtml(log.minutes)}分</span>
+              <span class="mini-tag">${escapeHtml((log.items || []).length)}項目</span>
+              ${allTags.map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('')}
             </div>
           </div>
           <ul class="study-points">${points}</ul>
           ${scoreHtml}
-          ${log.memo ? `<div class="memo">${escapeHtml(log.memo)}</div>` : ''}
+          ${log.memo ? `<div class="memo">${escapeHtml(log.memo).replace(/\\n/g, '<br>')}</div>` : ''}
           <div class="log-actions">
             <button class="btn ghost edit-btn" type="button">編集</button>
             <button class="btn danger delete-btn" type="button">削除</button>
@@ -1058,35 +1070,49 @@
         const points = log.items?.length
           ? `<ul class="study-points">${log.items.map(item => `<li>${escapeHtml(item.content || '内容未記入')}${item.amount ? ` <small>（${escapeHtml(item.amount)}）</small>` : ''}${item.minutes ? ` <small>・${escapeHtml(item.minutes)}分</small>` : ''}</li>`).join('')}</ul>`
           : '<div class="subtle">内容の記録なし</div>';
-        const tags = [log.category, `${log.minutes}分`, ...(log.tags || [])];
+
+        const allTags = Array.from(new Set((log.items || []).flatMap(item => item.tags || [])));
+
         const scoreHtml = log.score
           ? `<div class="memo"><strong>スコア：</strong>${escapeHtml(log.score.title || '模試・過去問')} / L ${escapeHtml(log.score.listening || '-')} / R ${escapeHtml(log.score.reading || '-')} / Total ${escapeHtml(log.score.total || '-')}</div>`
           : '';
         return `
           <div class="detail-item">
             <div class="detail-head">
-              <div class="date">${escapeHtml(log.category)}</div>
-              <div class="tag-row">${tags.map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('')}</div>
+              <div class="date">${escapeHtml(log.date)}</div>
+              <div class="tag-row">
+                <span class="mini-tag">${escapeHtml(log.minutes)}分</span>
+                <span class="mini-tag">${escapeHtml((log.items || []).length)}項目</span>
+                ${allTags.map(tag => `<span class="mini-tag">${escapeHtml(tag)}</span>`).join('')}
+              </div>
             </div>
             ${points}
             ${scoreHtml}
-            ${log.memo ? `<div class="memo">${escapeHtml(log.memo)}</div>` : ''}
+            ${log.memo ? `<div class="memo">${escapeHtml(log.memo).replace(/\\n/g, '<br>')}</div>` : ''}
           </div>
         `;
       }).join('');
     }
 
     function renderPartTimeChart(){
+      const discoveredTags = new Set(PART_TAGS);
+      state.logs.forEach(log => {
+        (log.items || []).forEach(item => {
+          (item.tags || []).forEach(tag => discoveredTags.add(tag));
+        });
+      });
+
       const map = new Map();
-      PART_TAGS.forEach(tag => map.set(tag, 0));
+      [...discoveredTags].forEach(tag => map.set(tag, 0));
 
       state.logs.forEach(log => {
-        const tags = (log.tags && log.tags.length) ? log.tags : ['未分類'];
-        const total = Number(log.minutes || 0);
-        const share = total / tags.length;
-        tags.forEach(tag => {
-          if(!map.has(tag)) map.set(tag, 0);
-          map.set(tag, map.get(tag) + share);
+        (log.items || []).forEach(item => {
+          const itemTags = (item.tags && item.tags.length) ? item.tags : ['未分類'];
+          const share = Number(item.minutes || 0) / itemTags.length;
+          itemTags.forEach(tag => {
+            if(!map.has(tag)) map.set(tag, 0);
+            map.set(tag, map.get(tag) + share);
+          });
         });
       });
 
