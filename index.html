@@ -122,6 +122,14 @@
       border:1px solid var(--line); border-radius:18px;
       background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,250,245,.72));
     }
+    .bullet-row.edit-mode{
+      align-items:start;
+      grid-template-columns:1.45fr .75fr .6fr auto;
+    }
+
+    .bullet-tag-picker{ display:flex; flex-wrap:wrap; gap:6px; grid-column:1 / -1; margin-top:2px; }
+    .bullet-tag-chip{ font-size:0.8rem; padding:6px 10px; border-radius:999px; border:1px solid #e7c7c7; background:#fff7f7; cursor:pointer; }
+    .bullet-tag-chip.active{ background:var(--accent); color:white; border-color:var(--accent); }
 
     .btn,.icon-btn,.segmented button,.calendar-day{ transition:.18s ease; }
     .btn,.icon-btn,.segmented button{ border:none; cursor:pointer; }
@@ -183,7 +191,12 @@
     }
 
     .detail-item,.log-item{
-      border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.72); padding:14px;
+      border:1px solid var(--line);
+      border-top:1px solid var(--line) !important;
+      box-shadow: inset 0 1px 0 var(--line);
+      border-radius:18px;
+      background:rgba(255,255,255,.72);
+      padding:14px;
     }
     .log-list{
       display:flex; flex-direction:column; gap:12px; margin-top:10px; max-height:760px; overflow:auto; padding-right:4px;
@@ -314,12 +327,24 @@
           <div style="margin-bottom:12px;">
             <div class="subtle" style="margin-bottom:8px;">Partタグ（複数選択可）</div>
             <div class="tag-picker" id="partTagPicker"></div>
+            <datalist id="editTagSuggestions">
+              <option value="Part 1"></option>
+              <option value="Part 2"></option>
+              <option value="Part 3"></option>
+              <option value="Part 4"></option>
+              <option value="Part 5"></option>
+              <option value="Part 6"></option>
+              <option value="Part 7"></option>
+              <option value="単語"></option>
+              <option value="文法"></option>
+              <option value="復習"></option>
+            </datalist>
           </div>
 
           <div class="bullet-head">
             <div>
               <div class="subtle" style="font-weight:700; color:var(--text);">学習内容</div>
-              <div class="subtle">内容ごとに学習時間も記録できます。各内容の合計がトータル時間に反映されます。</div>
+              <div class="subtle">通常保存時は上のタグが保存単位に付きます。編集時のみ、各項目ごとにタグを個別修正できます。</div>
             </div>
             <button class="btn ghost" id="addBulletBtn" type="button">＋ 項目を追加</button>
           </div>
@@ -694,33 +719,73 @@
       });
     }
 
-    function createBulletRow(content='', amount='', minutes=''){
-      const row = document.createElement('div');
-      row.className = 'bullet-row';
-      row.innerHTML = `
-        <input type="text" class="bullet-content" placeholder="例：Part 5 の問題集 20問" value="${escapeHtml(content)}">
-        <input type="text" class="bullet-amount" placeholder="例：20問 / 50語 / 8ページ" value="${escapeHtml(amount)}">
-        <input type="number" class="bullet-minutes" min="0" step="1" placeholder="分" value="${escapeHtml(minutes)}">
-        <button class="icon-btn" type="button" aria-label="削除">✕</button>
-      `;
-      row.querySelector('.icon-btn').addEventListener('click', () => {
-        row.remove();
-        syncTotalMinutesFromBullets();
-        if(!els.bulletList.children.length) createBulletRow();
+    function createBulletRow(content='', amount='', minutes='', itemTags=[]){
+  const row = document.createElement('div');
+  const isEditMode = state.editingId !== null;
+  row.className = 'bullet-row' + (isEditMode ? ' edit-mode' : '');
+
+  let tagPickerHtml = '';
+  if(isEditMode){
+    tagPickerHtml = `<div class="bullet-tag-picker"></div>`;
+  }
+
+  row.innerHTML = `
+    <input type="text" class="bullet-content" placeholder="例：Part 5 の問題集 20問" value="${escapeHtml(content)}">
+    <input type="text" class="bullet-amount" placeholder="例：20問 / 50語 / 8ページ" value="${escapeHtml(amount)}">
+    <input type="number" class="bullet-minutes" min="0" step="1" placeholder="分" value="${escapeHtml(minutes)}">
+    <button class="icon-btn" type="button">✕</button>
+    ${tagPickerHtml}
+  `;
+
+  const deleteBtn = row.querySelector('.icon-btn');
+  deleteBtn.addEventListener('click', () => {
+    row.remove();
+    syncTotalMinutesFromBullets();
+    if(!els.bulletList.children.length) createBulletRow();
+  });
+
+  row.querySelector('.bullet-minutes').addEventListener('input', syncTotalMinutesFromBullets);
+
+  if(isEditMode){
+    const picker = row.querySelector('.bullet-tag-picker');
+    let selected = new Set(itemTags || []);
+
+    function renderPicker(){
+      picker.innerHTML = '';
+      PART_TAGS.forEach(tag=>{
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'bullet-tag-chip' + (selected.has(tag) ? ' active':'');
+        chip.textContent = tag;
+        chip.onclick = ()=>{
+          if(selected.has(tag)) selected.delete(tag);
+          else selected.add(tag);
+          renderPicker();
+        };
+        picker.appendChild(chip);
       });
-      row.querySelector('.bullet-minutes').addEventListener('input', syncTotalMinutesFromBullets);
-      els.bulletList.appendChild(row);
+      row.dataset.tags = JSON.stringify([...selected]);
     }
 
+    renderPicker();
+  }
+
+  els.bulletList.appendChild(row);
+}
+
     function collectBullets(){
-      return [...els.bulletList.querySelectorAll('.bullet-row')]
-        .map(row => ({
-          content: row.querySelector('.bullet-content').value.trim(),
-          amount: row.querySelector('.bullet-amount').value.trim(),
-          minutes: Number(row.querySelector('.bullet-minutes').value || 0)
-        }))
-        .filter(item => item.content || item.amount || item.minutes);
-    }
+  return [...els.bulletList.querySelectorAll('.bullet-row')]
+    .map(row => {
+      const tagData = row.dataset.tags ? JSON.parse(row.dataset.tags) : [];
+      return {
+        content: row.querySelector('.bullet-content').value.trim(),
+        amount: row.querySelector('.bullet-amount').value.trim(),
+        minutes: Number(row.querySelector('.bullet-minutes').value || 0),
+        tags: tagData
+      };
+    })
+    .filter(item => item.content || item.amount || item.minutes || item.tags.length);
+}
 
     function syncTotalMinutesFromBullets(){
       const total = collectBullets().reduce((sum, item) => sum + Number(item.minutes || 0), 0);
@@ -851,7 +916,7 @@
       const globalTags = [...state.selectedTags];
       const items = rawItems.map(item => ({
         ...item,
-        tags: globalTags
+        tags: state.editingId !== null ? item.tags : globalTags
       }));
       const minutes = items.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
       const memo = els.studyMemo.value.trim();
@@ -883,7 +948,7 @@
       }else if(existingByDate){
         const combinedItems = [...(existingByDate.items || []), ...items];
         const combinedMinutes = combinedItems.reduce((sum, item) => sum + Number(item.minutes || 0), 0);
-        const combinedMemo = [existingByDate.memo, memo].filter(Boolean).join('\\n');
+        const combinedMemo = [existingByDate.memo, memo].filter(Boolean).join('\n');
         payload = {
           ...existingByDate,
           studyType: score ? 'score' : existingByDate.studyType,
@@ -910,11 +975,12 @@
       }
 
       saveState();
+      const wasEditing = state.editingId !== null;
       const savedDate = payload.date;
       clearForm();
       state.selectedCalendarDate = savedDate;
       renderAll();
-      alert(state.editingId ? '学習ログを更新しました。' : '学習内容を保存しました。');
+      alert(wasEditing ? '学習ログを更新しました。' : '学習内容を保存しました。');
     }
 
     function startEdit(id){
@@ -928,7 +994,7 @@
 
       els.studyDate.value = log.date;
       els.studyType.value = log.studyType || (log.score ? 'score' : 'normal');
-      state.selectedTags = [...((log.items && log.items[0] && log.items[0].tags) || [])];
+      state.selectedTags = [];
       renderPartTags();
 
       els.bulletList.innerHTML = '';
@@ -936,7 +1002,8 @@
         log.items.forEach(item => createBulletRow(
           item.content || '',
           item.amount || '',
-          item.minutes || ''
+          item.minutes || '',
+          item.tags || []
         ));
       }else{
         createBulletRow();
